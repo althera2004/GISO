@@ -1,0 +1,511 @@
+﻿using System;
+using System.Collections.Generic;
+using System.Linq;
+using System.Web;
+using System.Data;
+using System.Data.SqlClient;
+using System.Web.Script.Services;
+using System.Configuration;
+using System.Text;
+using Newtonsoft.Json;
+using System.Collections.ObjectModel;
+
+/// <summary>
+/// Summary description for Company
+/// </summary>
+public class Company
+{
+    public int Id { get; set; }
+    public string Name { get; set; }
+    public DateTime SubscriptionStart { get; set; }
+    public DateTime SubscriptionEnd { get; set; }
+    public string MailContact { get; set; }
+    public string Web { get; set; }
+    public string Language { get; set; }
+    public string Nif { get; set; }
+    public List<Department> Deparments { get; set; }
+    public List<Employee> Employees { get; set; }
+    public List<CompanyAddress> Addresses { get; set; }
+    public CompanyAddress DefaultAdress { get; set; }
+
+    public static ReadOnlyCollection<Employee> GetEmployees(int companyId)
+    {
+        List<Employee> res = new List<Employee>();
+        SqlConnection cnn = new SqlConnection(ConfigurationManager.ConnectionStrings["cns"].ConnectionString);
+        SqlCommand cmd = new SqlCommand("Company_GetEmployees", cnn);
+        cmd.CommandType = CommandType.StoredProcedure;
+        cmd.Parameters.Add("@CompanyId", SqlDbType.Int);
+        cmd.Parameters["@CompanyId"].Value = companyId;
+
+        try
+        {
+            cnn.Open();
+            SqlDataReader rdr = cmd.ExecuteReader();
+            while (rdr.Read())
+            {
+                res.Add(new Employee());
+            }
+        }
+        catch (Exception ex)
+        {
+        }
+        finally
+        {
+            if (cnn.State != ConnectionState.Closed)
+            {
+                cnn.Close();
+            }
+
+            cnn.Dispose();
+            cmd.Dispose();
+        }
+
+        return new ReadOnlyCollection<Employee>(res);
+    }
+
+    public Company()
+    {
+    }
+
+    public static int GetByCode(string code)
+    {
+        SqlConnection cnn = new SqlConnection(ConfigurationManager.ConnectionStrings["cns"].ConnectionString);
+        SqlCommand cmd = new SqlCommand("Company_GetByCode", cnn);
+        cmd.CommandType = CommandType.StoredProcedure;
+        cmd.Parameters.Add("@CompanyCode", SqlDbType.Text);
+        cmd.Parameters["@CompanyCode"].Value = code;
+        int res = 0;
+        try
+        {
+            cnn.Open();
+            SqlDataReader rdr = cmd.ExecuteReader();
+            if (rdr.HasRows)
+            {
+                rdr.Read();
+                res = rdr.GetInt32(0);
+            }
+        }
+        catch
+        {
+            res = 0;
+        }
+        finally
+        {
+            if (cnn.State != ConnectionState.Closed)
+            {
+                cnn.Close();
+            }
+
+            cnn.Dispose();
+            cmd.Dispose();
+        }
+
+        return res;
+    }
+
+    public Company(int companyId)
+    {
+        DateTime t1 = DateTime.Now;
+        this.Id = -1;
+        this.MailContact = string.Empty;
+        this.Web = string.Empty;
+        this.SubscriptionEnd = DateTime.Now;
+        this.SubscriptionStart = DateTime.Now;
+        this.Name = string.Empty;
+        this.Language = "es";
+
+        SqlConnection cnn = new SqlConnection(ConfigurationManager.ConnectionStrings["cns"].ConnectionString);
+        SqlCommand cmd = new SqlCommand("Company_GetById", cnn);
+        cmd.CommandType = CommandType.StoredProcedure;
+        cmd.Parameters.Add("@CompanyId", SqlDbType.Int);
+        cmd.Parameters["@CompanyId"].Value = companyId;
+
+        try
+        {
+            cnn.Open();
+            SqlDataReader rdr = cmd.ExecuteReader();
+            if (rdr.HasRows)
+            {
+                rdr.Read();
+                this.Id = rdr.GetInt32(0);
+                this.Name = rdr.GetString(1);
+                this.MailContact = string.Empty;
+                this.Web = string.Empty;
+                this.SubscriptionStart = rdr.GetDateTime(2);
+                this.SubscriptionEnd = rdr.GetDateTime(3);
+                this.Language = rdr.GetString(4);
+                this.Nif = rdr.GetString(5);
+            }
+
+            this.Deparments = Company.GetDepartments(this.Id);
+            this.Addresses = CompanyAddress.GetAddressByCompanyId(this);
+            foreach (CompanyAddress address in this.Addresses)
+            {
+                if (address.Default)
+                {
+                    this.DefaultAdress = address;
+                    break;
+                }
+            }
+
+            this.GetEmployees();
+        }
+        catch
+        {
+            this.Id = -1;
+            this.MailContact = string.Empty;
+            this.Web = string.Empty;
+            this.SubscriptionEnd = DateTime.Now;
+            this.SubscriptionStart = DateTime.Now;
+            this.Name = string.Empty;
+        }
+        finally
+        {
+            if (cnn.State != ConnectionState.Closed)
+            {
+                cnn.Close();
+            }
+
+            cnn.Dispose();
+            cmd.Dispose();
+        }
+
+        DateTime t2 = DateTime.Now;
+        TimeSpan dif = t2 - t1;
+        double x = dif.TotalMilliseconds;
+    }
+
+    public static string ToJson(Company company)
+    {
+        StringBuilder res = new StringBuilder("{").Append(Environment.NewLine);
+        res.Append("\t\t\"Id\":").Append(company.Id).Append(",").Append(Environment.NewLine);
+        res.Append("\t\t\"Name\":\"").Append(company.Name).Append("\",").Append(Environment.NewLine);
+        res.Append("\t\t\"Nif\":\"").Append(company.Nif).Append("\",").Append(Environment.NewLine);
+        res.Append("\t\t\"MailContact\":\"").Append(company.MailContact).Append("\",").Append(Environment.NewLine);
+        res.Append("\t\t\"Web\":\"").Append(company.Web).Append("\",").Append(Environment.NewLine);
+        res.Append("\t\t\"SubscriptionStart\":\"").Append(company.SubscriptionStart.ToShortDateString()).Append("\",").Append(Environment.NewLine);
+        res.Append("\t\t\"SubscriptionEnd\":\"").Append(company.SubscriptionEnd.ToShortDateString()).Append("\",").Append(Environment.NewLine);
+        res.Append("\t\t\"Departments\":").Append(Environment.NewLine);
+        res.Append("\t\t[");
+        bool firstDepartment = true;
+        foreach(Department department in company.Deparments)
+        {
+            if(firstDepartment)
+            {
+                firstDepartment=false;
+            }
+            else
+            {
+                res.Append(",");
+            }
+            
+            res.Append(Environment.NewLine).Append("\t\t\t").Append(department.ToJson());
+        }
+        res.Append(Environment.NewLine).Append("\t\t],").Append(Environment.NewLine);
+        res.Append("\t\t\"Employees\":").Append(Environment.NewLine);
+        res.Append("\t\t[");
+        bool firstEmployee = true;
+        foreach (Employee employee in company.Employees)
+        {
+            if (firstEmployee)
+            {
+                firstEmployee = false;
+            }
+            else
+            {
+                res.Append(",");
+            }
+
+            res.Append(Environment.NewLine).Append("\t\t\t").Append(employee.ToJson());
+        }
+
+        res.Append(Environment.NewLine).Append("\t\t]").Append(Environment.NewLine);
+
+        if (company.DefaultAdress != null)
+        {
+            res.Append(",").Append(Environment.NewLine).Append("DefaultAddress:").Append(company.DefaultAdress.ToJson);
+        }
+
+        res.Append(Environment.NewLine).Append("\t}");
+        return res.ToString();
+    }
+
+    public static List<Department> GetDepartments(int companyId)
+    {
+        List<Department> res = new List<Department>();
+
+        SqlConnection cnn = new SqlConnection(ConfigurationManager.ConnectionStrings["cns"].ConnectionString);
+        SqlCommand cmd = new SqlCommand("Company_GetDepartments", cnn);
+        cmd.CommandType = CommandType.StoredProcedure;
+        cmd.Parameters.Add("@CompanyId", SqlDbType.Int);
+        cmd.Parameters["@CompanyId"].Value = companyId;
+
+        try
+        {
+            cnn.Open();
+            SqlDataReader rdr = cmd.ExecuteReader();
+            while (rdr.Read())
+            {
+                res.Add(new Department()
+                {
+                    CompanyId = companyId,
+                    Id = rdr.GetInt32(0),
+                    Name = rdr.GetString(1)
+                });
+            }
+        }
+        catch
+        {
+        }
+        finally
+        {
+            if (cnn.State != ConnectionState.Closed)
+            {
+                cnn.Close();
+            }
+
+            cnn.Dispose();
+            cmd.Dispose();
+        }
+
+        return res;
+    }
+
+    public void GetDepartments()
+    {
+        this.Deparments = new List<Department>();
+        SqlConnection cnn = new SqlConnection(ConfigurationManager.ConnectionStrings["cns"].ConnectionString);
+        SqlCommand cmd = new SqlCommand("Company_GetDepartments", cnn);
+        cmd.CommandType = CommandType.StoredProcedure;
+        cmd.Parameters.Add("@CompanyId", SqlDbType.Int);
+        cmd.Parameters["@CompanyId"].Value = this.Id;
+
+        try
+        {
+            cnn.Open();
+            SqlDataReader rdr = cmd.ExecuteReader();
+            while (rdr.Read())
+            {
+                this.Deparments.Add(new Department()
+                {
+                    CompanyId = this.Id,
+                    Id = rdr.GetInt32(0),
+                    Name = rdr.GetString(1)
+                });
+            }
+        }
+        catch
+        {
+        }
+        finally
+        {
+            if (cnn.State != ConnectionState.Closed)
+            {
+                cnn.Close();
+            }
+
+            cnn.Dispose();
+            cmd.Dispose();
+        }
+    }
+
+    public void GetEmployees()
+    {
+        this.Employees = new List<Employee>();
+        SqlConnection cnn = new SqlConnection(ConfigurationManager.ConnectionStrings["cns"].ConnectionString);
+        SqlCommand cmd = new SqlCommand("Company_GetEmployees", cnn);
+        cmd.CommandType = CommandType.StoredProcedure;
+        cmd.Parameters.Add("@CompanyId", SqlDbType.Int);
+        cmd.Parameters["@CompanyId"].Value = this.Id;
+
+        try
+        {
+            cnn.Open();
+            SqlDataReader rdr = cmd.ExecuteReader();
+            Employee newEmployee = new Employee();
+            while (rdr.Read())
+            {
+                int employeeId = rdr.GetInt32(0);
+                if (employeeId != newEmployee.Id)
+                {
+                    newEmployee = new Employee()
+                    {
+                        Id = employeeId,
+                        Name = rdr.GetString(1),
+                        LastName = rdr.GetString(2),
+                        SecondLastName = rdr.GetString(3),
+                        Email = rdr.GetString(4),
+                        Phone = rdr.GetString(5)
+                    };
+                    
+                    newEmployee.Deparments = new List<Department>();
+                    if (rdr.GetInt32(7) != 0)
+                    {
+                        newEmployee.User = new ApplicationUser()
+                        {
+                            Id = rdr.GetInt32(7),
+                            Login = rdr.GetString(8),
+                            Language = rdr.GetString(9),
+                            Status = ApplicationLogin.IntegerToLoginResult(rdr.GetInt32(10))
+                        };
+                    }
+
+                    this.Employees.Add(newEmployee);
+                }
+
+                int departmetId = rdr.GetInt32(6);
+                foreach (Department department in this.Deparments)
+                {
+                    if (department.Id == departmetId)
+                    {
+                        newEmployee.Deparments.Add(department);
+                        department.Employees.Add(newEmployee);
+                        break;
+                    }
+                }
+                
+            }
+        }
+        catch (Exception ex)
+        {
+            string s = ex.Message;
+        }
+        finally
+        {
+            if (cnn.State != ConnectionState.Closed)
+            {
+                cnn.Close();
+            }
+
+            cnn.Dispose();
+            cmd.Dispose();
+        }
+    }
+
+    public static ActionResult Update(int companyId, string companyName, string nif, int defaultAddress, int userId)
+    {
+        ActionResult res = new ActionResult() { Success = false, MessageError = "no action" };
+
+        /* 
+         * CREATE PROCEDURE Company_Update
+         * @CompanyId int,
+         * @Name nvarchar(50),
+         * @Nif nvarchar(15),
+         * @DefaultAddress int,
+         * @UserId int
+         */
+
+        SqlConnection cnn = new SqlConnection(ConfigurationManager.ConnectionStrings["cns"].ConnectionString);
+        SqlCommand cmd = new SqlCommand("Company_Update", cnn);
+        cmd.CommandType = CommandType.StoredProcedure;
+        cmd.Parameters.Add("@CompanyId", SqlDbType.Int);
+        cmd.Parameters.Add("@Name", SqlDbType.Text);
+        cmd.Parameters.Add("@Nif", SqlDbType.Text);
+        cmd.Parameters.Add("@DefaultAddress", SqlDbType.Int);
+        cmd.Parameters.Add("@UserId", SqlDbType.Int);
+        cmd.Parameters["@CompanyId"].Value = companyId;
+        cmd.Parameters["@Name"].Value = companyName;
+        cmd.Parameters["@Nif"].Value = nif;
+        cmd.Parameters["@DefaultAddress"].Value = defaultAddress;
+        cmd.Parameters["@UserId"].Value = userId;
+
+        try
+        {
+            cnn.Open();
+            cmd.ExecuteNonQuery();
+            res.Success = true;
+            res.MessageError = string.Empty;
+        }
+        catch (Exception ex)
+        {
+            res.Success = false;
+            res.MessageError = ex.Message;
+        }
+        finally
+        {
+            if (cnn.State != ConnectionState.Closed)
+            {
+                cnn.Close();
+            }
+
+            cnn.Dispose();
+            cmd.Dispose();
+        }
+
+        return res;
+    }
+
+    public ReadOnlyCollection<KeyValuePair<string, int>> Categorias
+    {
+        get
+        {
+            List<KeyValuePair<string, int>> res = new List<KeyValuePair<string, int>>();
+            SqlConnection cnn = new SqlConnection(ConfigurationManager.ConnectionStrings["cns"].ConnectionString);
+            SqlCommand cmd = new SqlCommand("Company_GetDocumentCategories", cnn);
+            cmd.CommandType = CommandType.StoredProcedure;
+            cmd.Parameters.Add("@CompanyId", SqlDbType.Int);
+            cmd.Parameters["@CompanyId"].Value = this.Id;
+            try
+            {
+                cnn.Open();
+                SqlDataReader rdr = cmd.ExecuteReader();
+                while (rdr.Read())
+                {
+                    res.Add(new KeyValuePair<string, int>(rdr.GetString(1), rdr.GetInt32(0)));
+                }
+            }
+            catch (Exception ex)
+            {
+            }
+            finally
+            {
+                if (cnn.State != ConnectionState.Closed)
+                {
+                    cnn.Close();
+                }
+
+                cnn.Dispose();
+                cmd.Dispose();
+            }
+
+            return new ReadOnlyCollection<KeyValuePair<string, int>>(res);
+        }
+    }
+
+    public ReadOnlyCollection<KeyValuePair<string, int>> Procedencias
+    {
+        get
+        {
+            List<KeyValuePair<string, int>> res = new List<KeyValuePair<string, int>>();
+            SqlConnection cnn = new SqlConnection(ConfigurationManager.ConnectionStrings["cns"].ConnectionString);
+            SqlCommand cmd = new SqlCommand("Company_GetDocumentProcedencias", cnn);
+            cmd.CommandType = CommandType.StoredProcedure;
+            cmd.Parameters.Add("@CompanyId", SqlDbType.Int);
+            cmd.Parameters["@CompanyId"].Value = this.Id;
+            try
+            {
+                cnn.Open();
+                SqlDataReader rdr = cmd.ExecuteReader();
+                while (rdr.Read())
+                {
+                    res.Add(new KeyValuePair<string, int>(rdr.GetString(1), rdr.GetInt32(0)));
+                }
+            }
+            catch (Exception ex)
+            {
+            }
+            finally
+            {
+                if (cnn.State != ConnectionState.Closed)
+                {
+                    cnn.Close();
+                }
+
+                cnn.Dispose();
+                cmd.Dispose();
+            }
+
+            return new ReadOnlyCollection<KeyValuePair<string, int>>(res);
+        }
+    }
+}

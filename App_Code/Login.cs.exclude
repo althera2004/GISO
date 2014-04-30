@@ -1,0 +1,309 @@
+﻿using System.Text;
+using System;
+using System.Collections.Generic;
+using System.Collections.ObjectModel;
+using System.Linq;
+using System.Web;
+using System.Data;
+using System.Data.SqlClient;
+using System.Configuration;
+
+/// <summary>
+/// Summary description for Login
+/// </summary>
+public class ApplicationLogin
+{
+    public enum LoginResult
+    {
+        None = 0,
+        Ok = 1,
+        NoUser,
+        LockUser,
+        Fail,
+        Admin = 1001,
+        Administrative = 1002
+    };
+
+    public enum SecurityGroup
+    {
+        None = 0,
+        Company = 1,
+        Indicadores = 2,
+        Documentos = 3,
+        Formacion = 4,
+        Proveedores = 5,
+        Equipos = 6,
+        Incidencias = 7,
+        Auditorias = 8,
+        Revision = 9,
+        Procesos = 10
+    }
+
+    public struct LoginObject
+    {
+        public int Id { get; set; }
+        public string UserName { get; set; }
+        public ApplicationLogin.LoginResult Result { get; set; }
+        public int CompanyId { get; set; }
+        public List<SecurityGroup> Membership { get; set; }
+    }
+
+    public ApplicationLogin()
+    {
+    }
+
+    public static SecurityGroup IntegerToSecurityGroup(int value)
+    {
+        SecurityGroup res = SecurityGroup.None;
+        switch (value)
+        {
+            case 1:
+                res = SecurityGroup.Company;
+                break;
+            case 2:
+                res = SecurityGroup.Indicadores;
+                break;
+            case 3:
+                res = SecurityGroup.Documentos;
+                break;
+            case 4:
+                res = SecurityGroup.Formacion;
+                break;
+            case 5:
+                res = SecurityGroup.Proveedores;
+                break;
+            case 6:
+                res = SecurityGroup.Equipos;
+                break;
+            case 7:
+                res = SecurityGroup.Incidencias;
+                break;
+            case 8:
+                res = SecurityGroup.Auditorias;
+                break;
+            case 9:
+                res = SecurityGroup.Revision;
+                break;
+            case 10:
+                res = SecurityGroup.Procesos;
+                break;
+        }
+
+        return res;
+    }
+
+    public static LoginResult IntegerToLoginResult(int value)
+    {
+        LoginResult res = LoginResult.Fail;
+        switch (value)
+        {
+            case 0:
+                res = LoginResult.None;
+                break;
+            case 1:
+                res = LoginResult.Ok;
+                break;
+            case 2:
+                res = LoginResult.LockUser;
+                break;
+            case 3:
+                res = LoginResult.Fail;
+                break;
+            case 1001:
+                res = LoginResult.Admin;
+                break;
+            case 1002:
+                res = LoginResult.Administrative;
+                break;
+        }
+
+        return res;
+    }
+
+    public static void LogonFailed(int userId)
+    {
+        SqlConnection cnn = new SqlConnection(ConfigurationManager.ConnectionStrings["cns"].ConnectionString);
+        SqlCommand cmd = new SqlCommand("LogonFailed", cnn);
+        cmd.CommandType = CommandType.StoredProcedure;
+
+        try
+        {
+            cnn.Open();
+            cmd.Parameters.Add("@UserId", SqlDbType.Int);
+            cmd.Parameters["@UserId"].Value = userId;
+            cmd.ExecuteNonQuery();
+        }
+        finally
+        {
+            if (cnn.State != ConnectionState.Closed)
+            {
+                cnn.Close();
+            }
+
+            cnn.Dispose();
+            cmd.Dispose();
+        }
+    }
+
+    public static LoginObject GetLogin(string userName, string password, string company, string ip)
+    {
+        LoginObject res = new LoginObject()
+        {
+            Id = -1,
+            UserName = string.Empty,
+            Result = LoginResult.NoUser
+        };
+
+        SqlConnection cnn = new SqlConnection(ConfigurationManager.ConnectionStrings["cns"].ConnectionString);
+        SqlCommand cmd = new SqlCommand("GetLogin", cnn);
+
+        try
+        {
+            cmd.CommandType = CommandType.StoredProcedure;
+            cmd.Parameters.Add("@Login", SqlDbType.Text);
+            cmd.Parameters.Add("@Password", SqlDbType.Text);
+            cmd.Parameters.Add("@CompanyCode", SqlDbType.Text);
+
+            cmd.Parameters["@Login"].Value = userName;
+            cmd.Parameters["@Password"].Value = password;
+            cmd.Parameters["@CompanyCode"].Value = company.Trim().ToUpperInvariant();
+            cnn.Open();
+            SqlDataReader rdr = cmd.ExecuteReader();
+            if (rdr.HasRows)
+            {
+                bool first = true;
+                while (rdr.Read())
+                {
+                    if (first)
+                    {
+                        first = false;
+                        res.Id = rdr.GetInt32(0);
+                        res.Result = IntegerToLoginResult(rdr.GetInt32(1));
+                        res.UserName = userName;
+                        res.CompanyId = rdr.GetInt32(3);
+                        res.Membership = new List<SecurityGroup>();
+                        res.Membership.Add(IntegerToSecurityGroup(rdr.GetInt32(5)));
+                        if (res.Result == LoginResult.Fail)
+                        {
+                            LogonFailed(res.Id);
+                        }
+                        else
+                        {
+                            ApplicationUser user = new ApplicationUser()
+                            {
+                                Id = res.Id,
+                                Name = res.UserName,
+                                Login = rdr.GetString(7),
+                                Language = rdr.GetString(2),
+                                Status = res.Result
+                            };
+                            user.Id = res.Id;
+                            user.Name = res.UserName;
+                            HttpContext.Current.Session["User"] = user;
+                        }
+                    }
+                    else
+                    {
+                        res.Membership.Add(IntegerToSecurityGroup(rdr.GetInt32(5)));
+                    }
+                }
+            }
+            else
+            {
+                res.Result = LoginResult.NoUser;
+            }
+        }
+        catch (Exception ex)
+        {
+            res.Result = LoginResult.Fail;
+            res.Id = -1;
+            res.UserName = ex.Message;
+        }
+        finally
+        {
+            if (cnn.State != ConnectionState.Closed)
+            {
+                cnn.Close();
+            }
+
+            cnn.Dispose();
+            cmd.Dispose();
+        }
+
+        bool result = res.Result == LoginResult.Ok || res.Result == LoginResult.Admin || res.Result == LoginResult.Administrative;
+        InsertLog(userName, ip,  result ? 1 : 2, res.Id, company, res.CompanyId);
+
+        return res;
+    }
+
+    private static void InsertLog(string userName, string ip, int result, int userId, string companyCode, int companyId)
+    {
+        /* CREATE PROCEDURE Log_Login
+         * @UserName nvarchar(50),
+         * @Date datetime,
+         * @Ip nvarchar(50),
+         * @Result int,
+         * @UserId int,
+         * @CompanyCode nvarchar(10),
+         * @CompanyId int
+         * */
+
+        SqlConnection cnn = new SqlConnection(ConfigurationManager.ConnectionStrings["cns"].ConnectionString);
+        SqlCommand cmd = new SqlCommand("Log_Login", cnn);
+        cmd.CommandType = CommandType.StoredProcedure;
+
+        cmd.Parameters.Add("@UserName", SqlDbType.Text);
+        cmd.Parameters.Add("@Ip", SqlDbType.Text);
+        cmd.Parameters.Add("@Result", SqlDbType.Int);
+        cmd.Parameters.Add("@UserId", SqlDbType.Int);
+        cmd.Parameters.Add("@CompanyCode", SqlDbType.Text);
+        cmd.Parameters.Add("@CompanyId", SqlDbType.Int);
+
+        cmd.Parameters["@UserName"].Value = userName;
+        cmd.Parameters["@Result"].Value = result;
+        cmd.Parameters["@Ip"].Value = ip;
+        cmd.Parameters["@CompanyCode"].Value = companyCode;
+
+        if (companyId != 0)
+        {
+            cmd.Parameters["@CompanyId"].Value = companyId;
+        }
+        else
+        {
+            companyId = Company.GetByCode(companyCode);
+            if (companyId == 0)
+            {
+                cmd.Parameters["@CompanyId"].Value = DBNull.Value;
+            }
+            else
+            {
+                cmd.Parameters["@CompanyId"].Value = companyId;
+            }
+        }
+
+        if (userId > 0)
+        {
+            cmd.Parameters["@UserId"].Value = userId;
+        }
+        else
+        {
+            cmd.Parameters["@UserId"].Value = DBNull.Value;
+        }
+
+        try
+        {
+            cnn.Open();
+            cmd.ExecuteNonQuery();
+        }
+        finally
+        {
+            if (cnn.State != ConnectionState.Closed)
+            {
+                cnn.Close();
+            }
+
+            cnn.Dispose();
+            cmd.Dispose();
+        }         
+    }
+}

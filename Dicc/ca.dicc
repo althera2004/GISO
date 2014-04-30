@@ -1,0 +1,171 @@
+﻿Panel principal::Panel principal
+Cuadro de mandos::Cuadre de comandament
+Compañía::Companyia
+Datos de la compañía::Dades de l'empresa
+Gestión de los datos de la empresa::Gestió de les dades de l'empresa
+Departamentos::Departaments
+Departamento::Departament
+Cargos::Càrrecs
+Cargo::Càrrec
+Proceso::Procés
+Formación::Formació
+Formación realizada en la empresa::Formació realitzada a l'empresa
+Procesos::Processos
+Responsabilidades::Responsabilitats
+Nuevo proceso::Nou procés
+Editar proceso::Editar procés
+Notas::Notes
+Empleados::Empleats
+Tipo::Tipus
+Documento::Document
+Experiencia laboral::Experiència laboral
+Habilidades::Habilitats
+Responsable::Responsable
+Responsable directo::Responsable directe
+Datos principales::Dades bàsiques
+Formación::Formació
+Formación interna::Formació interna
+Código::Codi
+Añadir proceso::Afegir procés
+Nueva formación::Nova formació
+Editar formación::Editar formació
+Revisión::Revisió
+Documentos::Documents
+Informes::Informes
+Histórico::Històric
+Formación académica deseada::Formació acadèmica desitjada
+Formación específica deseada::Formació específica desitjada
+Servicio::Servei
+Inicio::Inici
+Nuevo cargo::Nou càrrec
+Editar cargo::Editar càrrec
+Equipos::Equips
+Proveedores::Proveïdors
+Formación::Formació
+Indicadores::Indicadors
+Auditorías::Auditories
+Incidencias::Incidències
+Revisión dirección::Revisió direcció
+Administración::Administració
+Finalización::Finaliztació
+Renovación automática::Renovació automàtica
+Guardar cambios::Desar canvis
+Nuevos documentos::Nous documents
+Visualizaciones::Visualitzacions
+Borradores::Ensborranys
+AddNewEmployee::Afegir empleat
+Welcome::Benvingut
+Perfil::Perfil
+Perfil de usuario::Perfil d'usuari
+Administración::Administració
+Añadir departamento::Afegir departament
+Añadir documento::Afegir document
+Añadir empleado::Afegir empleat
+Añadir cargo::Afegir càrrec
+Añadir indicador::Afegir indicador
+Buscar::Cercar
+Teléfono::Telèfon
+Email::Email
+Estado::Estat
+Nombre::Nom
+Usuario::Usuari
+Trazas::Traces
+Acceso no válido::Accés no vàlid
+Documento obsoleto::Document obsolet
+Trazas de trabajo::Traces de treball
+Gestión de usuarios::Gestió d'usuaris
+Logs de acceso::Logs d'accés
+Avisos::Avisos
+semana::setmana
+esta semana::aquesta setmana
+Usuario::Usuario
+Usuarios::Usuaris
+por::per
+Nueva versión::Nova versió
+Versión::Versió
+Eliminado::Eliminat
+Insertado::Insertat
+Acciones recientes::Darreres accions
+afectados::afectats
+Bienvenido::Benvingut
+Espacio::Espai
+Detalle del empleado::Detall de l'empleat
+Situación general y últimas acciones::Situació general y darreres acciones
+Últimos::Darrers
+Publicado::Publicat
+Ver perfil de::Veure perfil de
+Ver detalle de::Veure detall de
+Nombre o Razón social::Nom o Raó social
+Asistente de creación de empleado::Assistent per a la creació d'un nou empleat
+Añadir nuevo empleado::Afegir nou empleat
+Nuevo documento::Nou document
+Detalle del documento::Detall del document
+Indefinido::Indefinit
+Normas::Normes
+Legislación internacional::Lesgislació internacional
+Legislación nacional::Legislació nacional
+Legislación autonómica::Legislació autonòmica
+Legislación local::Legislació local
+Instrucciones::Instraccions
+Procedimientos::Procedients
+Registros::Registres
+Fecha::Data
+Motivo::Motiu
+Aprobado por::Aprovar per
+Fecha alta::Data alta
+Fecha baja::Data baixa
+Fecha revisión::Data revisió
+Categoría::Categoria
+Origen::Origen
+Días::Dies
+Meses::Messos
+Años::Anys
+Procedencia::Procedència
+Ubicación::Ubicació
+Motivo del cambio::Motiu del canvi
+Conservación::Conservació
+Interno::Intern
+Externo::Extern
+Cancelar::Cancel·lar
+Nueva versión::Nova versió
+Modificado por::Modificar per
+Nuevo::Nou
+Nueva::Nova
+Activo::Actiu
+Versiones::Versions
+Sí::Sí
+No::No
+Formación para el cargo::Formació per al càrrec
+Asociar a departamento existente::Associar a departament exitent
+Inicio::Inici
+Desarrollo::Desenvolupament
+Fin::Fi
+Enero::Gener
+Febrero::Febrer
+Marzo::Març
+Abril::Abril
+Mayo::Maig
+Junio::Juny
+Julio::Juliol
+Agosto::Agost
+Septiembre::Setembre
+Octubre::Octubre
+Noviembre::Novembre
+Diciembre::Decembre
+Salir::Sortir
+Curso::Curs
+Realizado::Realitzat
+Apto::Apte
+Fecha prevista::Data prevista
+Participante::Participant
+Participantes::Participants
+Eliminar::Eliminar
+Todo::Tot
+Todos::Tots
+Todas::Totes
+Realizadas::Realitzades
+Año desde::Des del'any
+Año hasta::Fins l'any
+Pendientes::Pendents
+Nueva acción formativa::Nova acció formativa
+Asociar a departamento existente::Associar a departament existent

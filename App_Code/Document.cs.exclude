@@ -1,0 +1,400 @@
+﻿using System;
+using System.Collections.Generic;
+using System.Collections.ObjectModel;
+using System.Configuration;
+using System.Data;
+using System.Data.SqlClient;
+using System.Web;
+using GisoFramework.Item;
+
+/// <summary>
+/// Summary description for Document
+/// </summary>
+public class Document
+{
+    public long Id { get; set; }
+    public string Codigo { get; set; }
+    public Company Company { get; set; }
+    public string Desription { get; set; }
+    public List<DocumentVersion> Versiones { get; set; }
+    public KeyValuePair<string, int> Categoria { get; set; }
+    public KeyValuePair<string, int> Procedencia { get; set; }
+    public string Ubicacion { get; set; }
+    public DateTime FechaAlta { get; set; }
+    public DateTime? FechaBaja { get; set; }
+    public bool Origen { get; set; }
+    public int Conservacion { get; set; }
+    public int ConservacionTipo { get; set; }
+    public DateTime ModifiedOn { get; set; }
+    public ApplicationUser Modifiedby { get; set; }
+    public bool Activo
+    {
+        get
+        {
+            return !this.FechaBaja.HasValue;
+        }
+    }
+
+	public Document()
+	{
+        this.Versiones = new List<DocumentVersion>();
+        this.Conservacion = 0;
+        this.ConservacionTipo = 0;
+        this.Origen = true;
+	}
+
+    public DocumentVersion LastVersion
+    {
+        get
+        {
+            DocumentVersion res = new DocumentVersion();
+            foreach(DocumentVersion version in this.Versiones)
+            {
+                if (res.Date == null || version.Date > res.Date)
+                {
+                    res = version;
+                }
+            }
+
+            return res;
+        }
+    }
+
+    public static ReadOnlyCollection<Document> GetByCompany(Company company)
+    {
+        List<Document> res = new List<Document>();
+        SqlConnection cnn = new SqlConnection(ConfigurationManager.ConnectionStrings["cns"].ConnectionString);
+        SqlCommand cmd = new SqlCommand("Company_GetDocuments", cnn);
+        cmd.CommandType = CommandType.StoredProcedure;
+        cmd.Parameters.Add("@CompanyId", SqlDbType.Int);
+        try
+        {
+            cmd.Parameters["@CompanyId"].Value = company.Id;
+            Document newDocument = new Document();
+            cnn.Open();
+            SqlDataReader rdr = cmd.ExecuteReader();
+            while (rdr.Read())
+            {
+                if (newDocument.Id != rdr.GetInt64(0))
+                {
+                    newDocument = new Document()
+                    {
+                        Id = rdr.GetInt64(0),
+                        Company = company,
+                        Desription = rdr.GetString(2),
+                        Codigo = rdr.GetString(7),
+                        Categoria = new KeyValuePair<string, int>(rdr.GetString(12), rdr.GetInt32(11)),
+                        Procedencia = new KeyValuePair<string,int>(rdr.GetString(14), rdr.GetInt32(13))
+                    };
+
+                    res.Add(newDocument);
+                }
+
+                newDocument.Versiones.Add(new DocumentVersion()
+                {
+                    DocumentId = rdr.GetInt64(0),
+                    Date = rdr.GetDateTime(6),
+                    Company = company,
+                    Id = rdr.GetInt64(1),
+                    State = DocumentVersion.IntegerToStatus(rdr.GetInt32(5)),
+                    User = new ApplicationUser(rdr.GetInt32(4)),
+                    Version = rdr.GetInt32(3),
+                    Reason = rdr.GetString(8),
+                    UserCreateName = rdr.GetString(10)
+                });
+            }
+        }
+        catch (Exception ex)
+        {
+        }
+        finally
+        {
+            if (cnn.State != ConnectionState.Closed)
+            {
+                cnn.Close();
+            }
+
+            cnn.Dispose();
+            cmd.Dispose();
+        }
+
+        return new ReadOnlyCollection<Document>(res);
+    }
+
+    public Document GetById(long documentId, Company company)
+    {
+        return this.GetById(documentId, company.Id);
+    }
+
+    public Document GetById(long documentId, int companyId)
+    {
+        Document res = new Document();
+        SqlConnection cnn = new SqlConnection(ConfigurationManager.ConnectionStrings["cns"].ConnectionString);
+        SqlCommand cmd = new SqlCommand("Document_GetById", cnn);
+        cmd.CommandType = CommandType.StoredProcedure;
+        cmd.Parameters.Add("@DocumentId", SqlDbType.BigInt);
+        cmd.Parameters.Add("@CompanyId", SqlDbType.Int);
+
+        Company company = new Company(companyId);
+
+        try
+        {
+            cmd.Parameters["@DocumentId"].Value = documentId;
+            cmd.Parameters["@CompanyId"].Value = companyId;
+            cnn.Open();
+            SqlDataReader rdr = cmd.ExecuteReader();
+            bool first = true;
+            while (rdr.Read())
+            {
+                if (first)
+                {
+                    first = false;
+                    res.Id = documentId;
+                    res.Company = company;
+                    res.Desription = rdr.GetString(2);
+                    res.Categoria = new KeyValuePair<string, int>(rdr.GetString(11), rdr.GetInt32(10));
+                    res.Procedencia = new KeyValuePair<string, int>(rdr.GetString(13), rdr.GetInt32(12));
+                    res.Codigo = rdr.GetString(14);
+                    res.FechaAlta = rdr.GetDateTime(15);
+                    if (!rdr.IsDBNull(16))
+                    {
+                        res.FechaBaja = rdr.GetDateTime(16);
+                    }
+
+                    res.Conservacion = rdr.GetInt32(17);
+                    res.ConservacionTipo = rdr.GetInt32(18);
+                    res.Origen = rdr.GetInt32(19) == 1;
+                    res.Ubicacion = rdr.GetString(20);
+                    res.ModifiedOn = rdr.GetDateTime(22);
+                    res.Modifiedby = new ApplicationUser(rdr.GetInt32(21));
+                }
+
+                res.Versiones.Add(new DocumentVersion()
+                {
+                    Id = rdr.GetInt64(1),
+                    Company = company,
+                    DocumentId = documentId,
+                    User = new ApplicationUser(rdr.GetInt32(4)),
+                    Version = rdr.GetInt32(3),
+                    Date = rdr.GetDateTime(6),
+                    State = DocumentVersion.IntegerToStatus(rdr.GetInt32(5)),
+                    Reason = rdr.GetString(7),
+                    UserCreateName = rdr.GetString(9)
+                });
+            }
+        }
+        catch (Exception ex)
+        {
+        }
+        finally
+        {
+            if (cnn.State != ConnectionState.Closed)
+            {
+                cnn.Close();
+            }
+
+            cnn.Dispose();
+            cmd.Dispose();
+        }
+
+        return res;
+    }
+
+    public static ReadOnlyCollection<Document> Drafts(ReadOnlyCollection<Document> documents)
+    {
+        List<Document> res = new List<Document>();
+        foreach (Document document in documents)
+        {
+            if (document.LastVersion.State == DocumentVersion.Status.Draft)
+            {
+                res.Add(document);
+            }
+        }
+
+        return new ReadOnlyCollection<Document>(res);
+    }
+
+    public static ReadOnlyCollection<Document> Recent(ReadOnlyCollection<Document> documents)
+    {
+        List<Document> res = new List<Document>();
+        foreach (Document document in documents)
+        {
+            if (document.LastVersion.Date > DateTime.Now.AddDays(-7))
+            {
+                res.Add(document);
+            }
+        }
+
+        return new ReadOnlyCollection<Document>(res);
+    }
+    
+    public string GetDocumentRow()
+    {
+        DocumentVersion actual = this.LastVersion;
+        return string.Format(@"<tr><td><strong>{0}</strong></td><td class=""hidden-480"">{1}</td><td class=""hidden-480"" align=""right"">{2}</td></tr>", this.DocumentViewLink, this.Codigo, actual.Version.ToString());
+    }
+    
+    public string DocumentViewLink
+    {
+        get
+        {
+            return string.Format("<a href=\"DocumentView.aspx?id={0}\" title=\"{2} {1}\">{1}</a>", this.Id, this.Desription, ((Dictionary<string, string>)HttpContext.Current.Session["Dictionary"])["Ver detalle de"]);
+        }
+    }
+
+    public string ToJson()
+    {
+        DocumentVersion actual = this.LastVersion;
+        string fechaBaja = string.Empty;
+        if (this.FechaBaja.HasValue)
+        {
+            fechaBaja = string.Format("{0:dd/MM/yyyy}", this.FechaBaja.Value);
+        }
+
+        return string.Format(@"
+            {{
+                Id:{0},
+                Codigo:'{1}',
+                Documento:'{2}',
+                FechaAlta:'{3}',
+                FechaBaja:'{4}',
+                Categoria:{5},
+                FechaRevision:'{6}',
+                Revision:{7},
+                Procedencia:{8},
+                Conservacion:{{type:{9}, cantidad:{10}}},
+                Origen:{11},
+                Ubicacion:'{12}',
+                Motivo:'{13}',
+                Activo:{14}
+            }}
+        ", this.Id, this.Codigo, this.Desription, string.Format("{0:dd/MM/yyy}", this.FechaAlta), fechaBaja, this.Categoria.Value, string.Format("{0:dd/MM/yyy}", actual.Date), actual.Version, this.Procedencia.Value, this.ConservacionTipo, this.Conservacion, this.Origen ? "1" : "2", this.Ubicacion, actual.Reason, this.Activo ? "true" : "false");
+    }
+
+    public ActionResult Update(int userId)
+    {
+        ActionResult res = new ActionResult() { Success = false, MessageError = "No action" };
+        /* CREATE PROCEDURE Document_Update
+         * @DocumentId bigint,
+         * @CompanyId int,
+         * @Description nvarchar(50),
+         * @CategoryId int,
+         * @FechaBaja date,
+         * @Origen int,
+         * @ProcedenciaId int,
+         * @Conservacion int,
+         * @ConservacionType int,
+         * @Activo bit,
+         * @Codigo nvarchar(10),
+         * @Ubicacion nvarchar(100),
+         * @UserId int */
+        SqlConnection cnn = new SqlConnection(ConfigurationManager.ConnectionStrings["cns"].ConnectionString);
+        SqlCommand cmd = new SqlCommand("Document_Update", cnn);
+        cmd.CommandType = CommandType.StoredProcedure;
+        cmd.Parameters.Add("@DocumentId", SqlDbType.BigInt);
+        cmd.Parameters.Add("@CompanyId", SqlDbType.Int);
+        cmd.Parameters.Add("@Description", SqlDbType.NVarChar);
+        cmd.Parameters.Add("@FechaBaja", SqlDbType.Date);
+        cmd.Parameters.Add("@Origen", SqlDbType.Int);
+        cmd.Parameters.Add("@CategoryId", SqlDbType.Int);
+        cmd.Parameters.Add("@ProcedenciaId", SqlDbType.Int);
+        cmd.Parameters.Add("@Conservacion", SqlDbType.Int);
+        cmd.Parameters.Add("@ConservacionType", SqlDbType.Int);
+        cmd.Parameters.Add("@Activo", SqlDbType.Bit);
+        cmd.Parameters.Add("@Codigo", SqlDbType.NVarChar);
+        cmd.Parameters.Add("@Ubicacion", SqlDbType.NVarChar);
+        cmd.Parameters.Add("@UserId", SqlDbType.Int);
+
+        cmd.Parameters["@DocumentId"].Value = this.Id;
+        cmd.Parameters["@CompanyId"].Value = this.Company.Id;
+        cmd.Parameters["@Description"].Value = this.Desription;
+
+        if (this.FechaBaja.HasValue)
+        {
+            cmd.Parameters["@FechaBaja"].Value = this.FechaBaja;
+        }
+        else
+        {
+            cmd.Parameters["@FechaBaja"].Value = DBNull.Value;
+        }
+
+        cmd.Parameters["@Origen"].Value = this.Origen;
+        cmd.Parameters["@CategoryId"].Value = this.Categoria.Value;
+        cmd.Parameters["@ProcedenciaId"].Value = this.Procedencia.Value;
+        cmd.Parameters["@Conservacion"].Value = this.Conservacion;
+        cmd.Parameters["@ConservacionType"].Value = this.ConservacionTipo;
+        cmd.Parameters["@Activo"].Value = this.Activo;
+        cmd.Parameters["@Codigo"].Value = this.Codigo;
+        cmd.Parameters["@Ubicacion"].Value = this.Ubicacion;
+        cmd.Parameters["@UserId"].Value = userId;
+
+        try
+        {
+            cnn.Open();
+            cmd.ExecuteNonQuery();
+            res.Success = true;
+        }
+        catch (Exception ex)
+        {
+            res.MessageError = ex.Message;
+        }
+        finally
+        {
+            if (cnn.State != ConnectionState.Closed)
+            {
+                cnn.Close();
+            }
+
+            cnn.Dispose();
+            cmd.Dispose();
+        }
+
+        return res;
+    }
+
+    public static ActionResult Versioned(int id, int userId, int companyId, int version)
+    {
+        ActionResult res = new ActionResult() { Success = false, MessageError = "No action" };
+        /* CREATE PROCEDURE [dbo].[Document_Versioned]
+         * @DocumentId int,
+         * @CompanyId int,
+         * @Version int,
+         * @UserId int */
+        SqlConnection cnn = new SqlConnection(ConfigurationManager.ConnectionStrings["cns"].ConnectionString);
+        SqlCommand cmd = new SqlCommand("Document_Versioned", cnn);
+        cmd.CommandType = CommandType.StoredProcedure;
+        cmd.Parameters.Add("@DocumentId", SqlDbType.BigInt);
+        cmd.Parameters.Add("@CompanyId", SqlDbType.Int);
+        cmd.Parameters.Add("@Version", SqlDbType.Int);
+        cmd.Parameters.Add("@UserId", SqlDbType.Int);
+
+        cmd.Parameters["@DocumentId"].Value = id;
+        cmd.Parameters["@CompanyId"].Value = companyId;
+        cmd.Parameters["@Version"].Value = version;
+        cmd.Parameters["@UserId"].Value = userId;
+
+        try
+        {
+            cnn.Open();
+            cmd.ExecuteNonQuery();
+            res.Success = true;
+            res.MessageError = "ok";
+        }
+        catch (Exception ex)
+        {
+            res.MessageError = ex.Message;
+        }
+        finally
+        {
+            if (cnn.State != ConnectionState.Closed)
+            {
+                cnn.Close();
+            }
+
+            cnn.Dispose();
+            cmd.Dispose();
+        }
+
+        return res;
+    }
+}

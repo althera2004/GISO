@@ -1,0 +1,65 @@
+﻿using System.Text;
+using System;
+using System.Collections.Generic;
+using System.Collections.ObjectModel;
+using System.Linq;
+using System.Web;
+using System.Data;
+using System.Data.SqlClient;
+using System.Configuration;
+using GisoFramework;
+using GisoFramework.Item;
+
+/// <summary>
+/// Summary description for DocumentVersion
+/// </summary>
+public class DocumentVersion
+{
+    public enum Status
+    {
+        Draft = 0,
+        Publish = 1,
+        Obsolete = 2
+    }
+
+    public Status State;
+    public long Id;
+    public long DocumentId;
+    public int Version;
+    public ApplicationUser User;
+    public Company Company;
+    public DateTime Date;
+    public string Reason { get; set; }
+    public string UserCreateName { get; set; }
+
+	public DocumentVersion()
+	{
+		//
+		// TODO: Add constructor logic here
+		//
+	}
+
+    public static Status IntegerToStatus(int value)
+    {
+        switch (value)
+        {
+            case 1:
+                return Status.Publish;
+            case 2:
+                return Status.Obsolete;
+        }
+
+        return Status.Draft;
+    }
+    
+    public string GetHistoricoRow()
+    {
+        return string.Format(@"
+                                <tr>
+                                    <th style=""width:80px;"">{0}</th>
+								    <th style=""width:80px;"">{1}</th>
+								    <th>{2}</th>
+								    <th style=""width:150px;"">{3}</th>
+                                </tr>", this.Version, string.Format("{0:dd/MM/yyyy}", this.Date), this.Reason, this.UserCreateName);
+    }
+}

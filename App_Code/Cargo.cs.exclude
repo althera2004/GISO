@@ -1,0 +1,193 @@
+﻿using System;
+using System.Collections.Generic;
+using System.Collections.ObjectModel;
+using System.Configuration;
+using System.Data;
+using System.Data.SqlClient;
+using GisoFramework.Item;
+
+/// <summary>
+/// Summary description for Cargo
+/// </summary>
+public class Cargo
+{
+    public float Id { get; set; }
+    public string Description { get; set; }
+    public int CompanyId { get; set; }
+    public Employee Employee { get; set; }
+    public Department Department { get; set; }
+    public Employee ModifiedBy { get; set; }
+    public DateTime ModifiedOn { get; set; }
+    public string Responsabilidades { get; set; }
+    public string Notas { get; set; }
+    public string FormacionAcademicaDeseada { get; set; }
+    public string FormacionEspecificaDeseada { get; set; }
+    public string ExperienciaLaboralDeseada { get; set; }
+    public string HabilidadesDeseadas { get; set; }
+
+    public string Json
+    {
+        get
+        {
+            if (this.Id > 0)
+            {
+
+                return string.Format(@"{{
+                    ""Id"":{0},
+                    ""Description"":""{1}"",
+                    ""CompanyId"":{2},
+                    ""Responsabilidades"":""{3}"",
+                    ""Notas"":""{4}"",
+                    ""FormacionAcademicaDeseada"":""{5}"",
+                    ""FormacionEspecificaDeseada"":""{6}"",
+                    ""ExperienciaLaboralDeseada"":""{7}"",
+                    ""HabilidadesDeseadas"":""{8}"",
+                    ""Employee"":{{""Id"":{9}}},
+                    ""Department"":{{""Id"":{10}}},
+                    ""ModifiedBy"":{{""Id"":{11}}},
+                    ""ModifiedOn"":""{12}""
+                    }}
+                ", this.Id, this.Description, this.CompanyId, this.Responsabilidades, this.Notas, this.FormacionAcademicaDeseada, this.FormacionEspecificaDeseada, this.ExperienciaLaboralDeseada, this.HabilidadesDeseadas, this.Employee.Id, this.Department.Id, this.ModifiedBy.Id, this.ModifiedOn);
+            }
+
+            return string.Format(@"{{
+                    ""Id"":0,
+                    ""Description"":"""",
+                    ""CompanyId"":0,
+                    ""Responsabilidades"":"""",
+                    ""Notas"":"""",
+                    ""FormacionAcademicaDeseada"":"""",
+                    ""FormacionEspecificaDeseada"":"""",
+                    ""ExperienciaLaboralDeseada"":"""",
+                    ""HabilidadesDeseadas"":"""",
+                    ""Employee"":{{""Id"":0}},
+                    ""Department"":{{""Id"":0}},
+                    ""ModifiedBy"":{{""Id"":0}},
+                    ""ModifiedOn"":""{0}""
+                    }}
+                ", DateTime.Now);
+        }
+    }
+
+	public Cargo()
+	{
+        this.Id = 0;
+        this.Department = new Department() { Id = 0, Name = string.Empty };
+        this.Employee = new Employee() { Id = 0, Name = string.Empty };
+	}
+
+    public Cargo(int id, int companyId)
+    {
+        SqlConnection cnn = new SqlConnection(ConfigurationManager.ConnectionStrings["cns"].ConnectionString);
+        SqlCommand cmd = new SqlCommand("Cargos_GetById", cnn);
+        cmd.CommandType = CommandType.StoredProcedure;
+        cmd.Parameters.Add("@Id", SqlDbType.Int);
+        cmd.Parameters.Add("@CompanyId", SqlDbType.Int);
+        cmd.Parameters["@Id"].Value = id;
+        cmd.Parameters["@CompanyId"].Value = companyId;
+
+        try
+        {
+            cnn.Open();
+            SqlDataReader rdr = cmd.ExecuteReader();
+            if (rdr.HasRows)
+            {
+                rdr.Read();
+                this.Id = rdr.GetInt64(0);
+                this.Description = rdr.GetString(1);
+                this.Responsabilidades = rdr.GetString(2);
+                this.Notas = rdr.GetString(3);
+                this.FormacionAcademicaDeseada = rdr.GetString(4);
+                this.FormacionEspecificaDeseada = rdr.GetString(5);
+                this.ExperienciaLaboralDeseada = rdr.GetString(6);
+                this.HabilidadesDeseadas = rdr.GetString(7);
+                this.Employee = new Employee(rdr.GetInt32(8));
+                this.Department = new Department(rdr.GetInt32(9), companyId);
+                this.CompanyId = companyId;
+                this.ModifiedBy = new Employee(rdr.GetInt32(10));
+                this.ModifiedOn = rdr.GetDateTime(11);
+            }
+        }
+        catch
+        {
+        }
+        finally
+        {
+            if (cnn.State != ConnectionState.Closed)
+            {
+                cnn.Close();
+            }
+
+            cnn.Dispose();
+            cmd.Dispose();
+        }
+    }
+
+    public static Cargo Empty
+    {
+        get
+        {
+            return new Cargo();
+        }
+    }
+
+    public static ReadOnlyCollection<Cargo> Cargos(Company company)
+    {
+        return Cargos(company.Id);
+    }
+
+    public static ReadOnlyCollection<Cargo> Cargos(int companyId)
+    {
+        List<Cargo> res = new List<Cargo>();
+
+        SqlConnection cnn = new SqlConnection(ConfigurationManager.ConnectionStrings["cns"].ConnectionString);
+        SqlCommand cmd = new SqlCommand("Cargos_GetAll", cnn);
+        cmd.CommandType = CommandType.StoredProcedure;
+        cmd.Parameters.Add("@CompanyId", SqlDbType.Int);
+        cmd.Parameters["@CompanyId"].Value = companyId;
+
+        try
+        {
+            cnn.Open();
+            SqlDataReader rdr = cmd.ExecuteReader();
+            while (rdr.Read())
+            {
+                res.Add(new Cargo()
+                {
+                    Id = rdr.GetInt64(0),
+                    Description = rdr.GetString(1),
+                    Responsabilidades = rdr.GetString(2),
+                    Notas = rdr.GetString(3),
+                    FormacionAcademicaDeseada = rdr.GetString(4),
+                    FormacionEspecificaDeseada = rdr.GetString(5),
+                    ExperienciaLaboralDeseada = rdr.GetString(6),
+                    HabilidadesDeseadas = rdr.GetString(7),
+                    Employee = new Employee(rdr.GetInt32(8)),
+                    Department = new Department(rdr.GetInt32(9), companyId),
+                    CompanyId = companyId
+                });
+            }
+        }
+        catch
+        {
+            res = new List<Cargo>();
+        }
+        finally
+        {
+            if (cnn.State != ConnectionState.Closed)
+            {
+                cnn.Close();
+            }
+
+            cnn.Dispose();
+            cmd.Dispose();
+        }
+
+        return new ReadOnlyCollection<Cargo>(res);
+    }
+
+    public string GetCargoRow()
+    {
+        return string.Format("<tr><td><a href=\"CargosView.aspx?id={2}\">{4}</a></td><td>{0}</td><td style=\"cursor:pointer;\" onclick=\"EditDepartment({3});\">{1}</a></td><tr>", this.Employee.FullName, this.Department.Name, this.Id, this.Department.Id, this.Description);
+    }
+}

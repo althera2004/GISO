@@ -1,0 +1,13 @@
+﻿/// <summary>
+/// Summary description for ActionResult
+/// </summary>
+public class ActionResult
+{
+    public bool Success { get; set; }
+
+    public string MessageError { get; set; }
+
+    public ActionResult()
+    {
+    }
+}

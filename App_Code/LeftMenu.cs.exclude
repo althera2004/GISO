@@ -1,0 +1,78 @@
+﻿using System;
+using System.Collections.Generic;
+using System.Linq;
+using System.Web;
+using System.Text;
+
+/// <summary>
+/// Summary description for MainMenu
+/// </summary>
+public class LeftMenu
+{
+    Dictionary<string, string> dictionary;
+    ApplicationUser user;
+
+    public LeftMenu(ApplicationUser user, Dictionary<string, string> dictionary)
+	{
+        this.dictionary = dictionary;
+        this.user = user;
+	}
+
+    public string Render()
+    {
+        StringBuilder res = new StringBuilder(Environment.NewLine);
+
+        if (this.user.Groups.Contains(ApplicationLogin.SecurityGroup.Company))
+        {
+            res.Append(LeftMenuOption.Render(this.dictionary["Cuadro de mandos"], "/DashBoard.aspx", false, "icon-dashboard"));
+        }
+
+        if (this.user.Groups.Contains(ApplicationLogin.SecurityGroup.Company))
+        {
+            res.Append(LeftMenuOption.RenderAdmin(this.dictionary));
+        }
+
+        if (this.user.Groups.Contains(ApplicationLogin.SecurityGroup.Procesos))
+        {
+            res.Append(LeftMenuOption.Render(this.dictionary["Procesos"], "/ProcesosList.aspx", false, "icon-list"));
+        }
+
+        if (this.user.Groups.Contains(ApplicationLogin.SecurityGroup.Documentos))
+        {
+            res.Append(LeftMenuOption.Render(this.dictionary["Documentos"], "/Documents.aspx", false, "icon-group"));
+        }
+
+        if (this.user.Groups.Contains(ApplicationLogin.SecurityGroup.Formacion))
+        {
+            res.Append(LeftMenuOption.Render(this.dictionary["Formación"], "#", false, "icon-edit"));
+        }
+
+        if (this.user.Groups.Contains(ApplicationLogin.SecurityGroup.Proveedores))
+        {
+            res.Append(LeftMenuOption.Render(this.dictionary["Proveedores"], "#", false, "icon-edit"));
+        }
+
+        if (this.user.Groups.Contains(ApplicationLogin.SecurityGroup.Equipos))
+        {
+            res.Append(LeftMenuOption.Render(this.dictionary["Equipos"], "#", false, "icon-edit"));
+        }
+
+        if (this.user.Groups.Contains(ApplicationLogin.SecurityGroup.Incidencias))
+        {
+            res.Append(LeftMenuOption.Render(this.dictionary["Incidencias"], "#", false, "icon-edit"));
+        }
+
+        if (this.user.Groups.Contains(ApplicationLogin.SecurityGroup.Auditorias))
+        {
+            res.Append(LeftMenuOption.Render(this.dictionary["Auditorías"], "#", false, "icon-edit"));
+        }
+
+        if (this.user.Groups.Contains(ApplicationLogin.SecurityGroup.Revision))
+        {
+            res.Append(LeftMenuOption.Render(this.dictionary["Revisión dirección"], "#", false, "icon-edit"));
+        }
+
+        res.Append(Environment.NewLine);
+        return res.ToString();
+    }
+}

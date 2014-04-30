@@ -1,0 +1,274 @@
+﻿using System;
+using System.Collections.Generic;
+using System.Collections.ObjectModel;
+using System.Configuration;
+using System.Data;
+using System.Data.SqlClient;
+using System.Globalization;
+
+/// <summary>
+/// Summary description for ActivityLog
+/// </summary>
+public class ActivityLog
+{
+    public enum TargetType
+    {
+        Undefined = 0,
+        Company = 1,
+        User = 2,
+        SecurityGroup = 3,
+        Document = 4,
+        Department = 5,
+        CompanyAddress = 6,
+        Login = 7,
+    }
+
+    public class Activity
+    {
+        public class Deparment
+        {
+            public static readonly int Create = 1;
+            public static readonly int Modify = 2;
+            public static readonly int Delete = 3;
+        }
+
+        public class Document
+        {
+            public static readonly int Create = 1;
+            public static readonly int Update = 2;
+            public static readonly int Delete = 3;
+            public static readonly int Versioned = 5;
+            public static readonly int Draft = 6;
+            public static readonly int Validated = 6;
+        }
+
+        public string Target { get; set; }
+        public string Action { get; set; }
+        public DateTime Date { get; set; }
+        public string Changes { get; set; }
+        public string Employee { get; set; }
+
+        public string GetHistoricoRow
+        {
+            get
+            {
+                return string.Format(@"
+                    <tr>
+                        <td>{0}</td>
+                        <td>{1}</td>
+                        <td>{2}</td>
+                        <td>{3}</td>
+                        <td>{4}</td>
+                    </tr>
+                ", Date, Target, Action, Changes, Employee);
+            }
+        }
+
+        public string GetHistoricoTargetedRow
+        {
+            get
+            {
+                return string.Format(@"
+                    <tr>
+                        <td>{0}</td>
+                        <td>{1}</td>
+                        <td>{2}</td>
+                        <td>{3}</td>
+                    </tr>
+                ", Date, Action, Changes, Employee);
+            }
+        }
+    }
+
+	public ActivityLog()
+	{
+	}
+
+    public static ActionResult Login(string user, string ip, string companyCode, int result, int companyId)
+    {
+        string extradata = string.Format("{0} - {1:dd/MM/yyyy hh:mm:ss} - {2}", companyCode, DateTime.Now, ip);
+        return InsertLogActivity(TargetType.Login, 0, 0, companyId, result, extradata);
+    }
+
+    public static ActionResult Company(int targetId, int userId, int companyId, int actionId, string extraData)
+    {
+        return InsertLogActivity(TargetType.Company, targetId, userId, companyId, actionId, extraData);
+    }
+
+    public static ActionResult User(int targetId, int userId, int companyId, int actionId, string extraData)
+    {
+        return InsertLogActivity(TargetType.User, targetId, userId, companyId, actionId, extraData);
+    }
+
+    public static ActionResult SecurityGroup(int targetId, int userId, int companyId, int actionId, string extraData)
+    {
+        return InsertLogActivity(TargetType.SecurityGroup, targetId, userId, companyId, actionId, extraData);
+    }
+
+    public static ActionResult DocumentVersioned(int targetId, int userId, int companyId, int version)
+    {
+       return  Document(targetId, userId, companyId, Activity.Document.Versioned, "Version:" + version.ToString(CultureInfo.InvariantCulture));
+    }
+
+    public static ActionResult Document(int targetId, int userId, int companyId, int actionId, string extraData)
+    {
+        return InsertLogActivity(TargetType.Document, targetId, userId, companyId, actionId, extraData);
+    }
+
+    public static ActionResult Department(int targetId, int userId, int companyId, int actionId, string extraData)
+    {
+        return InsertLogActivity(TargetType.Department, targetId, userId, companyId, actionId, extraData);
+    }
+
+    public static ActionResult InsertLogActivity(TargetType targetType, int targetId, int userId, int companyId, int actionId, string extraData)
+    {
+        ActionResult res = new ActionResult() { Success = false, MessageError = "No action" };
+        string storedProcedureName = string.Empty;
+
+        switch (targetType)
+        {
+            case TargetType.Company:
+                storedProcedureName = "ActivityCompany";
+                break;
+            case TargetType.User:
+                storedProcedureName = "ActivityUser";
+                break;
+            case TargetType.SecurityGroup:
+                storedProcedureName = "ActivitySecurityGroup";
+                break;
+            case TargetType.Document:
+                storedProcedureName = "ActivityDocument";
+                break;
+            case TargetType.Department:
+                storedProcedureName = "ActivityDepartment";
+                break;
+            case TargetType.Login:
+                storedProcedureName = "ActivityLogin";
+                break;
+            default:
+                storedProcedureName = string.Empty;
+                break;
+        }
+
+
+        if (string.IsNullOrEmpty(storedProcedureName))
+        {
+            res.MessageError = "No valid item";
+        }
+
+        SqlConnection cnn = new SqlConnection(ConfigurationManager.ConnectionStrings["cns"].ConnectionString);
+        SqlCommand cmd = new SqlCommand(storedProcedureName, cnn);
+        cmd.CommandType = CommandType.StoredProcedure;
+        try
+        {
+            cmd.Parameters.Add("@TargetId", SqlDbType.Int);
+            cmd.Parameters.Add("@UserId", SqlDbType.Int);
+            cmd.Parameters.Add("@CompanyId", SqlDbType.Int);
+            cmd.Parameters.Add("@ActionId", SqlDbType.Int);
+            cmd.Parameters.Add("@ExtraData", SqlDbType.Text);
+
+            cmd.Parameters["@TargetId"].Value = targetId;
+            cmd.Parameters["@UserId"].Value = userId;
+            cmd.Parameters["@CompanyId"].Value = companyId;
+            cmd.Parameters["@ActionId"].Value = actionId;
+            cmd.Parameters["@ExtraData"].Value = extraData;
+
+            cnn.Open();
+            cmd.ExecuteNonQuery();
+            res.Success = true;
+            res.MessageError = string.Empty;
+        }
+        catch (Exception ex)
+        {
+            res.MessageError = ex.Message;
+        }
+        finally
+        {
+            if (cnn.State != ConnectionState.Closed)
+            {
+                cnn.Close();
+            }
+
+            cnn.Dispose();
+            cmd.Dispose();
+        }
+
+        return res;
+    }
+
+    public static ReadOnlyCollection<Activity> GetActivity(int itemId, int targetType, int companyId, DateTime? from, DateTime? to)
+    {
+        List<Activity> res = new List<Activity>();
+        /* ALTER PROCEDURE [dbo].[Get_Activity]
+         * @CompanyId int,
+         * @TargetType int,
+         * @ItemId int,
+         * @From date,
+         * @To date */
+
+        SqlConnection cnn = new SqlConnection(ConfigurationManager.ConnectionStrings["cns"].ConnectionString);
+        SqlCommand cmd = new SqlCommand("Get_Activity", cnn);
+        cmd.CommandType = CommandType.StoredProcedure;
+
+        cmd.Parameters.Add("@CompanyId", SqlDbType.Int);
+        cmd.Parameters.Add("@TargetType", SqlDbType.Int);
+        cmd.Parameters.Add("@ItemId", SqlDbType.Int);
+        cmd.Parameters.Add("@From", SqlDbType.Date);
+        cmd.Parameters.Add("@To", SqlDbType.Date);
+
+        cmd.Parameters["@CompanyId"].Value = companyId;
+        cmd.Parameters["@TargetType"].Value = targetType;
+        cmd.Parameters["@ItemId"].Value = itemId;
+
+        if (from.HasValue)
+        {
+            cmd.Parameters["@From"].Value = from.Value;
+        }
+        else
+        {
+            cmd.Parameters["@From"].Value = DBNull.Value;
+        }
+
+        if (to.HasValue)
+        {
+            cmd.Parameters["@To"].Value = to.Value;
+        }
+        else
+        {
+            cmd.Parameters["@To"].Value = DBNull.Value;
+        }
+
+        try
+        {
+            cnn.Open();
+            SqlDataReader rdr = cmd.ExecuteReader();
+            while (rdr.Read())
+            {
+                res.Add(new Activity()
+                {
+                    Date = rdr.GetDateTime(1),
+                    Target = rdr.GetString(4),
+                    Changes = rdr.GetString(6),
+                    Employee = rdr.GetString(7),
+                    Action = rdr.GetString(5)
+                });
+            }
+        }
+        catch (Exception ex)
+        {
+            res = new List<Activity>();
+        }
+        finally
+        {
+            if (cnn.State != ConnectionState.Closed)
+            {
+                cnn.Close();
+            }
+
+            cnn.Dispose();
+            cmd.Dispose();
+        }
+
+        return new ReadOnlyCollection<Activity>(res);
+    }
+}

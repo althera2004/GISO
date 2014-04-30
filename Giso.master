@@ -1,0 +1,238 @@
+﻿<%@ Master Language="C#" AutoEventWireup="true" CodeFile="Giso.master.cs" Inherits="Giso" %>
+<!DOCTYPE html>
+<html xmlns="http://www.w3.org/1999/xhtml">
+<head runat="server">
+    <meta charset="utf-8" />
+    <title><%=this.Titulo %></title>
+    <meta name="description" content="overview &amp; stats" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+		<link href="assets/css/bootstrap.min.css" rel="stylesheet" />
+		<link rel="stylesheet" href="assets/css/font-awesome.min.css" />
+
+		<!--[if IE 7]>
+		  <link rel="stylesheet" href="assets/css/font-awesome-ie7.min.css" />
+		<![endif]-->
+		<link rel="stylesheet" href="assets/css/jquery-ui-1.10.3.custom.min.css" />
+        <link rel="stylesheet" href="assets/css/chosen.css" />
+        <link rel="stylesheet" href="assets/css/datepicker.css" />
+        <link rel="stylesheet" href="assets/css/bootstrap-timepicker.css" />
+        <link rel="stylesheet" href="assets/css/daterangepicker.css" />
+        <link rel="stylesheet" href="assets/css/colorpicker.css" />
+		<link rel="stylesheet" href="assets/css/ace-fonts.css" />
+		<link rel="stylesheet" href="assets/css/ace.min.css" />
+		<link rel="stylesheet" href="assets/css/ace-rtl.min.css" />
+		<link rel="stylesheet" href="assets/css/ace-skins.min.css" />
+
+		<!--[if lte IE 8]>
+		  <link rel="stylesheet" href="assets/css/ace-ie.min.css" />
+		<![endif]-->
+
+
+    <!-- Specific style of page -->
+    <asp:ContentPlaceHolder id="PageStyles" runat="server">
+    </asp:ContentPlaceHolder>
+	<script type="text/javascript" src="assets/js/ace-extra.min.js"></script>
+	<!--[if lt IE 9]>
+	<script src="assets/js/html5shiv.js"></script>
+	<script src="assets/js/respond.min.js"></script>
+	<![endif]-->
+    <!-- Specific scripts of page -->
+
+		<!--[if IE]>
+        <script type="text/javascript" src="//ajax.googleapis.com/ajax/libs/jquery/1.11.0/jquery.min.js"></script>
+        <![endif]-->
+    <asp:ContentPlaceHolder id="PageScripts" runat="server">
+    </asp:ContentPlaceHolder>
+    <script type="text/javascript">
+        var user = <%=this.User %>;
+        var company = <%=this.CompanyData %>;
+    </script>
+    <asp:ContentPlaceHolder id="ScriptHeadContentHolder" runat="server">
+    </asp:ContentPlaceHolder>
+</head>
+<body>
+    <form id="form1" runat="server">
+		<div class="navbar navbar-default" id="navbar">
+			<script type="text/javascript">
+			    try { ace.settings.check('navbar', 'fixed') } catch (e) { }
+			</script>
+			<div class="navbar-container" id="navbar-container">
+				<div class="navbar-header pull-left">
+					<span class="navbar-brand"><small><%=this.CompanyName %> - Gestión ISO 9000</small></span>
+				</div><!-- /.navbar-header -->
+				<div class="navbar-header pull-right" role="navigation">
+					<ul class="nav ace-nav">
+						<li class="grey">
+							<a data-toggle="dropdown" class="dropdown-toggle" href="#">
+								<i class="icon-bell-alt icon-animated-bell"></i>
+								<span class="badge badge-important">8</span>
+							</a>
+							<ul class="pull-right dropdown-navbar navbar-pink dropdown-menu dropdown-caret dropdown-close">
+								<li class="dropdown-header">
+									<i class="icon-warning-sign"></i>3 <%=this.Dictionary["Avisos"] %></li>
+								<li>
+									<a href="#">
+										<div class="clearfix">
+											<span class="pull-left">
+												<i class="btn btn-xs no-hover btn-pink icon-user"></i>Acceso no válido
+											</span>
+											<span class="pull-right badge badge-info">Hace 5 min</span>
+										</div>
+									</a>
+								</li>
+								<li>
+									<a href="#">
+										<div class="clearfix">
+											<span class="pull-left">
+												<i class="btn btn-xs no-hover btn-success icon-user"></i>Documento obsoleto
+											</span>
+											<span class="pull-right badge badge-success">Hace 1 hora</span>
+										</div>
+									</a>
+								</li>
+								<li>
+									<a href="#">
+										<div class="clearfix">
+											<span class="pull-left">
+												<i class="btn btn-xs no-hover btn-success icon-user"></i>Usuario bloqueado
+											</span>
+											<span class="pull-right badge badge-success">Hace 2 días</span>
+										</div>
+									</a>
+								</li>
+								<li></li>
+							</ul>
+						</li>
+						<li class="light-blue">
+							<a data-toggle="dropdown" href="#" class="dropdown-toggle">
+								<img class="nav-user-photo" src="assets/avatars/user.jpg" alt="Jason's Photo" />
+								<span class="user-info"><small><%=this.Dictionary["Bienvenido"] %>,</small><%=this.UserName %></span>
+								<i class="icon-caret-down"></i>
+							</a>
+							<ul class="user-menu pull-right dropdown-menu dropdown-yellow dropdown-caret dropdown-close">
+								<li><a href="UserProfileView.aspx?userid=<%=this.UserId %>"><i class="icon-user"></i><%=this.Dictionary["Perfil"] %></a></li>
+								<li class="divider"></li>
+								<li><a href="LogOut.aspx"><i class="icon-off"></i><%=this.Dictionary["Salir"] %></a></li>
+							</ul>
+						</li>
+					</ul><!-- /.ace-nav -->
+				</div><!-- /.navbar-header -->
+			</div><!-- /.container -->
+		</div>
+		<div class="main-container" id="main-container">
+			<script type="text/javascript">
+			    try { ace.settings.check('main-container', 'fixed') } catch (e) { }
+			</script>
+			<div class="main-container-inner">
+				<a class="menu-toggler" id="menu-toggler" href="#">
+					<span class="menu-text"></span>
+				</a>
+				<div class="sidebar" id="sidebar">
+					<script type="text/javascript">
+					    try { ace.settings.check('sidebar', 'fixed') } catch (e) { }
+					</script>
+
+                    <!-- #sidebar-shortcuts -->
+                    <asp:Literal runat="server" ID="LtMenuShortCuts"></asp:Literal>
+                    <!-- #sidebar-shortcuts -->
+
+					<ul class="nav nav-list">
+						<asp:Literal runat="server" ID="LeftMenu"></asp:Literal>
+					</ul><!-- /.nav-list -->
+					<div class="sidebar-collapse" id="sidebar-collapse">
+						<i class="icon-double-angle-left" data-icon1="icon-double-angle-left" data-icon2="icon-double-angle-right"></i>
+					</div>
+					<script type="text/javascript">
+					    try { ace.settings.check('sidebar', 'collapsed') } catch (e) { }
+					</script>
+				</div>
+
+				<div class="main-content">
+					<div class="breadcrumbs" id="breadcrumbs" style="padding-top:8px;">
+						<script type="text/javascript">
+						    try { ace.settings.check('breadcrumbs', 'fixed') } catch (e) { }
+						</script>
+
+						<ul class="breadcrumb">
+							<%=this.RenderBreadCrumb %>
+						</ul><!-- .breadcrumb -->
+
+                        <!-- Buscador -->
+						<div class="nav-search" id="nav-search">
+							<form class="form-search" action="Search.aspx" method="post">
+								<span class="input-icon">
+									<input type="text" placeholder="<%=this.Dictionary["Buscar"] %>" ..." class="nav-search-input" id="nav-search-input" autocomplete="off" />
+									<i class="icon-search nav-search-icon"></i>
+								</span>
+							</form>
+						</div>
+                        <!-- /Buscador -->
+                        <!-- #nav-search -->
+					</div>
+
+					<div class="page-content">
+						<div class="page-header">
+							<h1>
+								<%=this.Company.Name %>
+								<small><i class="icon-double-angle-right"></i> <%=this.Titulo %></small>
+							</h1>
+						</div><!-- /.page-header -->
+
+						<div class="row">
+							<div class="col-xs-12">
+								<!-- PAGE CONTENT BEGINS -->
+                                <asp:ContentPlaceHolder id="Contentholder1" runat="server">
+                                </asp:ContentPlaceHolder>
+								<!-- PAGE CONTENT ENDS -->
+							</div><!-- /.col -->
+						</div><!-- /.row -->
+					</div><!-- /.page-content -->
+				</div><!-- /.main-content -->
+            </div><!-- /.main-container-inner -->
+			<a href="#" id="btn-scroll-up" class="btn-scroll-up btn btn-sm btn-inverse">
+				<i class="icon-double-angle-up icon-only bigger-110"></i>
+			</a>
+		</div><!-- /.main-container -->
+    </form>
+		<!-- basic scripts -->
+
+		<!--[if !IE]> -->
+
+		<script type="text/javascript">
+		    window.jQuery || document.write("<script src='assets/js/jquery-2.0.3.min.js'>" + "<" + "/script>");
+		</script>
+
+		<!-- <![endif]-->
+
+		<!--[if IE]>
+<script type="text/javascript">
+ window.jQuery || document.write("<script src='assets/js/jquery-1.10.2.min.js'>"+"<"+"/script>");
+</script>
+<![endif]-->
+
+		<script type="text/javascript">
+		    if ("ontouchend" in document) document.write("<script src='//ajax.googleapis.com/ajax/libs/jquery/1.11.0/jquery.min.js'>" + "<" + "/script>");
+		</script>
+		<script type="text/javascript" src="assets/js/bootstrap.min.js"></script>
+		<script type="text/javascript" src="assets/js/typeahead-bs2.min.js"></script>
+
+		<!-- page specific plugin scripts -->
+
+		<!--[if lte IE 8]>
+		  <script type="text/javascript" src="assets/js/excanvas.min.js"></script>
+		<![endif]-->
+
+		<script type="text/javascript" src="assets/js/jquery-ui-1.10.3.custom.min.js"></script>
+		<script type="text/javascript" src="assets/js/jquery.ui.touch-punch.min.js"></script>
+		<script type="text/javascript" src="assets/js/jquery.slimscroll.min.js"></script>
+		<script type="text/javascript" src="assets/js/jquery.easy-pie-chart.min.js"></script>
+		<script type="text/javascript" src="assets/js/jquery.sparkline.min.js"></script>
+		<script type="text/javascript" src="assets/js/flot/jquery.flot.min.js"></script>
+		<script type="text/javascript" src="assets/js/flot/jquery.flot.pie.min.js"></script>
+		<script type="text/javascript" src="assets/js/flot/jquery.flot.resize.min.js"></script>
+		<script type="text/javascript" src="assets/js/ace-elements.min.js"></script>
+		<script type="text/javascript" src="assets/js/ace.min.js"></script>
+    <asp:ContentPlaceHolder id="ScriptBodyContentHolder" runat="server">
+    </asp:ContentPlaceHolder>
+</body>
+</html>
